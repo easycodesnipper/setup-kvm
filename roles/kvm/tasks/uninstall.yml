@@ -1,0 +1,13 @@
+---
+- name: Stop and disable libvirtd
+  service:
+    name: libvirtd
+    state: stopped
+    enabled: false
+  become: true
+
+- name: Remove KVM packages
+  package:
+    name: "{{ kvm_packages[ansible_os_family] }}"
+    state: absent
+  become: true

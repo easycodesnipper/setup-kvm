@@ -1,0 +1,2 @@
+# Default action: install or uninstall
+kvm_state: present

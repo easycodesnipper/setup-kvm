@@ -1,0 +1,8 @@
+---
+- name: Install KVM
+  include_tasks: install.yml
+  when: kvm_state == "present"
+
+- name: Uninstall KVM
+  include_tasks: uninstall.yml
+  when: kvm_state == "absent"

@@ -1,0 +1,12 @@
+---
+# Package lists per OS family
+
+kvm_packages:
+  Debian:
+    - qemu-kvm
+    - libvirt-daemon-system
+    - libvirt-daemon
+    - virtinst
+    - bridge-utils
+    - libosinfo-bin
+

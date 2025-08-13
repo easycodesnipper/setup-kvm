@@ -1,0 +1,24 @@
+---
+- name: Check if CPU supports virtualization
+  command: egrep -c '(vmx|svm)' /proc/cpuinfo
+  register: cpu_vt_count
+  changed_when: false
+  failed_when: false
+
+- name: Fail if virtualization is not supported
+  fail:
+    msg: "Virtualization not supported on this machine. KVM cannot be installed."
+  when: cpu_vt_count.stdout | int == 0
+
+- name: Ensure KVM packages are installed
+  package:
+    name: "{{ kvm_packages[ansible_os_family] }}"
+    state: present
+  become: true
+
+- name: Enable and start libvirtd
+  service:
+    name: libvirtd
+    state: started
+    enabled: true
+  become: true
