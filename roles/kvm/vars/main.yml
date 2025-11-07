@@ -6,6 +6,7 @@ kvm_packages:
     - qemu-kvm
     - libvirt-daemon-system
     - libvirt-daemon
+    - libvirt-clients
     - virtinst
     - bridge-utils
     - libosinfo-bin
