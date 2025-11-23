@@ -15,13 +15,34 @@
 - name: Update package cache
   ansible.builtin.package:
     update_cache: true
-  when: ansible_facts['pkg_mgr'] in ['apt', 'yum', 'dnf']
 
-- name: Install KVM packages
-  ansible.builtin.package:
-    name: "{{ kvm_packages[ansible_facts['os_family']] }}"
-    state: present
-  when: ansible_facts['os_family'] in ['Debian', 'RedHat']
+# - name: Install KVM packages
+#   ansible.builtin.package:
+#     name: "{{ kvm_packages[ansible_facts['os_family']] }}"
+#     state: present
+
+- name: Install package without recommended/weak dependencies
+  block:
+    - name: Install with APT (no recommends)
+      ansible.builtin.apt:
+        name: "{{ kvm_packages[ansible_facts['os_family']] }}"
+        install_recommends: no
+        state: present
+      when: ansible_facts['pkg_mgr'] == 'apt'
+
+    - name: Install with DNF (no weak deps)
+      ansible.builtin.dnf:
+        name: "{{ kvm_packages[ansible_facts['os_family']] }}"
+        install_weak_deps: no
+        state: present
+      when: ansible_facts['pkg_mgr'] == 'dnf'
+
+    - name: Install with YUM (no weak deps)
+      ansible.builtin.yum:
+        name: "{{ kvm_packages[ansible_facts['os_family']] }}"
+        install_weak_deps: no
+        state: present
+      when: ansible_facts['pkg_mgr'] == 'yum'
 
 - name: Verify KVM kernel modules are loaded
   ansible.builtin.command: lsmod | grep kvm
