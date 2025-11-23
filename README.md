@@ -78,6 +78,14 @@ ansible-playbook playbook-install.yml -v
 ansible-playbook playbook-install.yml --check
 ```
 
+```bash
+# Run on localhost with install playbook
+ansible-playbook -i localhost, -c local -e target_hosts=all playbook-install.yml
+
+# Run on localhost with uninstall playbook
+ansible-playbook -i localhost, -c local -e target_hosts=all playbook-uninstall.yml
+```
+
 ### 3. Verify Installation
 
 After the playbook completes, verify KVM is working:
