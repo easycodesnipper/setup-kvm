@@ -1,0 +1,51 @@
+---
+- name: Stop libvirt service
+  ansible.builtin.service:
+    name: libvirtd
+    state: stopped
+  failed_when: false
+
+- name: Disable libvirt service
+  ansible.builtin.service:
+    name: libvirtd
+    enabled: false
+  failed_when: false
+
+- name: Remove KVM packages
+  ansible.builtin.package:
+    name: "{{ kvm_packages[ansible_facts['os_family']] }}"
+    state: absent
+
+- name: Remove nested virtualization configuration for Intel CPUs
+  ansible.builtin.file:
+    path: /etc/modprobe.d/kvm-intel.conf
+    state: absent
+
+- name: Remove nested virtualization configuration for AMD CPUs
+  ansible.builtin.file:
+    path: /etc/modprobe.d/kvm-amd.conf
+    state: absent
+
+- name: Unload KVM modules
+  ansible.builtin.command: "modprobe -r {{ item }}"
+  loop:
+    - kvm_intel
+    - kvm_amd
+    - kvm
+  failed_when: false
+  changed_when: false
+
+- name: Remove user from KVM groups
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: "{{ item }}"
+    append: false
+  loop:
+    - libvirt
+    - kvm
+  when: ansible_user is defined
+  failed_when: false
+
+- name: Display uninstallation complete message
+  ansible.builtin.debug:
+    msg: "KVM has been uninstalled. You may need to reboot the system."

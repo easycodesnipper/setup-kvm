@@ -1,0 +1,20 @@
+---
+# Handlers for KVM setup
+
+- name: Reload KVM modules
+  ansible.builtin.shell: |
+    modprobe -r kvm_intel kvm_amd kvm
+    modprobe kvm
+    if grep -q vmx /proc/cpuinfo; then
+      modprobe kvm_intel
+    elif grep -q svm /proc/cpuinfo; then
+      modprobe kvm_amd
+    fi
+  changed_when: true
+  failed_when: false
+  listen: Reload KVM modules
+
+- name: Restart libvirt
+  ansible.builtin.service:
+    name: "{{ libvirt_service_name }}"
+    state: restarted

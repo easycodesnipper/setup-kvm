@@ -1,0 +1,9 @@
+---
+- name: Uninstall KVM
+  hosts: "{{ target_hosts | default('kvm_hosts') }}"
+  become: true
+  tasks:
+    - name: Include uninstall tasks
+      ansible.builtin.include_role:
+        name: kvm
+        tasks_from: uninstall.yml

@@ -1,0 +1,98 @@
+---
+# Main tasks for KVM setup
+
+- name: Check if system supports virtualization
+  ansible.builtin.command: grep -E '(vmx|svm)' /proc/cpuinfo
+  register: kvm_cpu_virt_check
+  changed_when: false
+  failed_when: false
+
+- name: Fail if virtualization is not supported
+  ansible.builtin.fail:
+    msg: "CPU does not support virtualization (VT-x/AMD-V). Please enable it in BIOS."
+  when: kvm_cpu_virt_check.rc != 0
+
+- name: Update package cache
+  ansible.builtin.package:
+    update_cache: true
+  when: ansible_facts['pkg_mgr'] in ['apt', 'yum', 'dnf']
+
+- name: Install KVM packages
+  ansible.builtin.package:
+    name: "{{ kvm_packages[ansible_facts['os_family']] }}"
+    state: present
+  when: ansible_facts['os_family'] in ['Debian', 'RedHat']
+
+- name: Verify KVM kernel modules are loaded
+  ansible.builtin.command: lsmod | grep kvm
+  register: kvm_modules
+  changed_when: false
+  failed_when: false
+
+- name: Display loaded KVM modules
+  ansible.builtin.debug:
+    msg: "{{ kvm_modules.stdout_lines }}"
+  when: kvm_modules.rc == 0
+
+- name: Load KVM module for Intel CPUs
+  ansible.builtin.command: modprobe kvm_intel
+  when: "'vmx' in kvm_cpu_virt_check.stdout"
+  changed_when: false
+  failed_when: false
+
+- name: Load KVM module for AMD CPUs
+  ansible.builtin.command: modprobe kvm_amd
+  when: "'svm' in kvm_cpu_virt_check.stdout"
+  changed_when: false
+  failed_when: false
+
+- name: Enable nested virtualization for Intel CPUs
+  ansible.builtin.copy:
+    content: "options kvm_intel nested=1"
+    dest: /etc/modprobe.d/kvm-intel.conf
+    mode: "0644"
+  when:
+    - kvm_enable_nested_virtualization | bool
+    - "'vmx' in kvm_cpu_virt_check.stdout"
+  notify: Reload KVM modules
+
+- name: Enable nested virtualization for AMD CPUs
+  ansible.builtin.copy:
+    content: "options kvm_amd nested=1"
+    dest: /etc/modprobe.d/kvm-amd.conf
+    mode: "0644"
+  when:
+    - kvm_enable_nested_virtualization | bool
+    - "'svm' in kvm_cpu_virt_check.stdout"
+  notify: Reload KVM modules
+
+- name: Configure SELinux for libvirt (if SELinux is enabled)
+  ansible.builtin.command: setsebool -P virt_use_nfs 1
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - ansible_facts['selinux']['status'] == 'enabled'
+  changed_when: false
+  failed_when: false
+
+- name: Add users to KVM groups
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: "{{ kvm_user_groups }}"
+    append: true
+  when: ansible_user is defined
+
+- name: Ensure libvirt service is enabled and started
+  ansible.builtin.service:
+    name: libvirtd
+    state: started
+    enabled: true
+
+- name: Check KVM installation
+  ansible.builtin.command: virsh version
+  register: kvm_virsh_version
+  changed_when: false
+
+- name: Display KVM version
+  ansible.builtin.debug:
+    msg: "KVM/libvirt successfully installed: {{ kvm_virsh_version.stdout_lines }}"
+

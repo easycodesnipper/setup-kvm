@@ -1,0 +1,3 @@
+---
+# Enable nested virtualization (optional)
+kvm_enable_nested_virtualization: false

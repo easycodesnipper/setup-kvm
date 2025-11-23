@@ -1,0 +1,21 @@
+---
+# Common variables for KVM hosts group
+
+# KVM packages by OS family
+kvm_packages:
+  Debian:
+    - qemu-kvm
+    - libvirt-daemon-system
+    - libvirt-clients
+    - virtinst
+    - bridge-utils
+  RedHat:
+    - qemu-kvm
+    - libvirt
+    - virt-install
+    - libvirt-client
+
+# User groups for KVM access
+kvm_user_groups:
+  - libvirt
+  - kvm

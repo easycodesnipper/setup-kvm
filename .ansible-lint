@@ -1,0 +1,15 @@
+---
+# Ansible-lint configuration
+
+skip_list:
+  - yaml[line-length]  # Allow longer lines in some cases
+
+warn_list:
+  - experimental  # Warn on experimental features
+
+exclude_paths:
+  - .git/
+  - .github/
+  - tmp/
+
+use_default_rules: true
