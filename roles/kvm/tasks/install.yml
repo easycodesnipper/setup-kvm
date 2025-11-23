@@ -95,4 +95,3 @@
 - name: Display KVM version
   ansible.builtin.debug:
     msg: "KVM/libvirt successfully installed: {{ kvm_virsh_version.stdout_lines }}"
-
