@@ -26,21 +26,20 @@
     - name: Install with APT (no recommends)
       ansible.builtin.apt:
         name: "{{ kvm_packages[ansible_facts['os_family']] }}"
-        install_recommends: no
+        install_recommends: false
         state: present
       when: ansible_facts['pkg_mgr'] == 'apt'
 
     - name: Install with DNF (no weak deps)
       ansible.builtin.dnf:
         name: "{{ kvm_packages[ansible_facts['os_family']] }}"
-        install_weak_deps: no
+        install_weak_deps: false
         state: present
       when: ansible_facts['pkg_mgr'] == 'dnf'
 
     - name: Install with YUM (no weak deps)
-      ansible.builtin.yum:
+      ansible.builtin.yum: # noqa: fqcn[action-core]
         name: "{{ kvm_packages[ansible_facts['os_family']] }}"
-        install_weak_deps: no
         state: present
       when: ansible_facts['pkg_mgr'] == 'yum'
 
