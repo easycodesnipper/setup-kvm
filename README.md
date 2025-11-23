@@ -123,18 +123,13 @@ kvm_packages:
     - qemu-kvm
     - libvirt-daemon-system
     - libvirt-clients
-    - bridge-utils
     - virtinst
-    - virt-manager
-    - cpu-checker
+    - bridge-utils
   RedHat:
     - qemu-kvm
     - libvirt
-    - libvirt-client
     - virt-install
-    - virt-manager
-    - virt-viewer
-    - bridge-utils
+    - libvirt-client
 ```
 
 ### User Groups
@@ -171,17 +166,12 @@ kvm_user_groups:
 - `libvirt-clients` - Libvirt client tools
 - `bridge-utils` - Network bridge utilities
 - `virtinst` - Virtual machine installation tools
-- `virt-manager` - Virtual machine manager GUI
-- `cpu-checker` - CPU virtualization checker
 
 ### RHEL/CentOS/Fedora Packages
 - `qemu-kvm` - KVM hypervisor
 - `libvirt` - Libvirt virtualization API
-- `libvirt-client` - Libvirt client tools
 - `virt-install` - Virtual machine installation tool
-- `virt-manager` - Virtual machine manager GUI
-- `virt-viewer` - Virtual machine viewer
-- `bridge-utils` - Network bridge utilities
+- `libvirt-client` - Libvirt client tools
 
 ## Post-Installation
 
