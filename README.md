@@ -56,7 +56,7 @@ server2 ansible_host=192.168.1.11 ansible_user=admin
 
 [all:vars]
 ansible_ssh_private_key_file=~/.ssh/id_rsa
-ansible_ssh_common_args='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+ansible_ssh_common_args='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o IdentityFile=~/.ssh/id_rsa -o IdentityFile=~/.ssh/id_ed25519'
 ```
 
 ### 2. Run the Playbook
@@ -78,12 +78,9 @@ ansible-playbook playbook-install.yml -v
 ansible-playbook playbook-install.yml --check
 ```
 
+# Run the Playbook alternatively
 ```bash
-# Run on localhost with install playbook
-ansible-playbook -i localhost, -c local -e target_hosts=all playbook-install.yml
-
-# Run on localhost with uninstall playbook
-ansible-playbook -i localhost, -c local -e target_hosts=all playbook-uninstall.yml
+./kvm.sh --install [--local]
 ```
 
 ### 3. Verify Installation
@@ -192,10 +189,14 @@ After running the playbook:
 
 ## Uninstallation
 
-To completely remove KVM from your system:
-
+# To completely remove KVM from your system:
 ```bash
 ansible-playbook playbook-uninstall.yml
+```
+
+# To completely remove KVM from your system alternatively:
+```bash
+./kvm.sh --uninstall [--local]
 ```
 
 This will:

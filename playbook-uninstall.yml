@@ -1,6 +1,6 @@
 ---
 - name: Uninstall KVM
-  hosts: "{{ target_hosts | default('kvm_hosts') }}"
+  hosts: "{{ kvm_hosts | default('localhost') }}"
   become: true
   tasks:
     - name: Include uninstall tasks
