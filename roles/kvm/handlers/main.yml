@@ -16,5 +16,5 @@
 
 - name: Restart libvirt
   ansible.builtin.service:
-    name: "{{ libvirt_service_name }}"
+    name: "libvirtd"
     state: restarted

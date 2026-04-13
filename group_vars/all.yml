@@ -9,11 +9,15 @@ kvm_packages:
     - libvirt-clients
     - virtinst
     - bridge-utils
+    - genisoimage          # Provides mkisofs for cloud-init ISO
+    - qemu-utils           # Provides qemu-img for qcow2 volumes
   RedHat:
     - qemu-kvm
     - libvirt
     - virt-install
     - libvirt-client
+    - genisoimage          # Provides mkisofs for cloud-init ISO
+    - qemu-utils           # Provides qemu-img for qcow2 volumes
 
 # User groups for KVM access
 kvm_user_groups:

@@ -101,10 +101,19 @@
     append: true
   when: ansible_user is defined
 
+- name: Set libvirt security_driver to none to fix permission issue
+  ansible.builtin.lineinfile:
+    path: /etc/libvirt/qemu.conf
+    regexp: '^\s*#?\s*security_driver\s*=\s*.*$'
+    line: 'security_driver = "none"'
+    backup: true
+  notify: Restart libvirt
+
 - name: Ensure libvirt service is enabled and started
   ansible.builtin.service:
     name: libvirtd
     state: started
+    daemon_reload: true
     enabled: true
 
 - name: Check KVM installation
