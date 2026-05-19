@@ -1,20 +1,22 @@
 ---
-# Handlers for KVM setup
+# handlers for kvm role
 
 - name: Reload KVM modules
   ansible.builtin.shell: |
-    modprobe -r kvm_intel kvm_amd kvm
+    rmmod kvm_intel || true
+    rmmod kvm_amd || true
+    rmmod kvm || true
     modprobe kvm
-    if grep -q vmx /proc/cpuinfo; then
-      modprobe kvm_intel
-    elif grep -q svm /proc/cpuinfo; then
-      modprobe kvm_amd
-    fi
-  changed_when: true
-  failed_when: false
-  listen: Reload KVM modules
+    modprobe kvm_intel || true
+    modprobe kvm_amd || true
 
 - name: Restart libvirt
   ansible.builtin.service:
-    name: "libvirtd"
+    name: libvirtd
     state: restarted
+
+- name: Update GRUB
+  ansible.builtin.command: update-grub
+
+- name: Update Initramfs
+  ansible.builtin.command: update-initramfs -u -k all

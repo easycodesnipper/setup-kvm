@@ -124,3 +124,10 @@
 - name: Display KVM version
   ansible.builtin.debug:
     msg: "KVM/libvirt successfully installed: {{ kvm_virsh_version.stdout_lines }}"
+
+- name: Configure VFIO PCI Passthrough
+  ansible.builtin.include_tasks: vfio.yml
+  when: >
+    (kvm_vfio_pci_ids is defined and kvm_vfio_pci_ids | length > 0) or
+    (kvm_auto_passthrough_nvidia | bool)
+
