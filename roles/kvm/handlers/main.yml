@@ -9,6 +9,7 @@
     modprobe kvm
     modprobe kvm_intel || true
     modprobe kvm_amd || true
+  # noqa: no-changed-when
 
 - name: Restart libvirt
   ansible.builtin.service:
@@ -17,6 +18,8 @@
 
 - name: Update GRUB
   ansible.builtin.command: update-grub
+  # noqa: no-changed-when
 
 - name: Update Initramfs
   ansible.builtin.command: update-initramfs -u -k all
+  # noqa: no-changed-when

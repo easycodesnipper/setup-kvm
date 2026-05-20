@@ -2,55 +2,53 @@
 # tasks/vfio.yml
 - name: Auto-detect NVIDIA PCI IDs using lspci
   ansible.builtin.shell: >
+    set -o pipefail;
     lspci -nn | grep -i NVIDIA | grep -oP '\[[0-9a-fA-F]{4}:[0-9a-fA-F]{4}\]' | tr -d '[]' | sort | uniq
+  args:
+    executable: /bin/bash
   register: lspci_nvidia_output
   changed_when: false
-  when:
-    - kvm_auto_passthrough_nvidia | bool
-    - kvm_vfio_pci_ids | length == 0
+  check_mode: false
 
 - name: Set dynamic VFIO PCI IDs
   ansible.builtin.set_fact:
     kvm_vfio_pci_ids: "{{ lspci_nvidia_output.stdout_lines }}"
-  when: 
-    - kvm_auto_passthrough_nvidia | bool
-    - lspci_nvidia_output.stdout_lines is defined
+  when:
     - lspci_nvidia_output.stdout_lines | length > 0
 
-- name: Skip VFIO setup if no devices found
-  ansible.builtin.meta: end_play
-  when: kvm_vfio_pci_ids | length == 0
+- name: Apply VFIO Configuration
+  when: kvm_vfio_pci_ids is defined and kvm_vfio_pci_ids | length > 0
+  block:
+    - name: Determine IOMMU flag based on CPU
+      ansible.builtin.set_fact:
+        iommu_flag: "{% if 'vmx' in kvm_cpu_virt_check.stdout %}intel_iommu=on{% elif 'svm' in kvm_cpu_virt_check.stdout %}amd_iommu=on{% else %}intel_iommu=on{% endif %}"
 
-- name: Determine IOMMU flag based on CPU
-  ansible.builtin.set_fact:
-    iommu_flag: "{% if 'vmx' in kvm_cpu_virt_check.stdout %}intel_iommu=on{% elif 'svm' in kvm_cpu_virt_check.stdout %}amd_iommu=on{% else %}intel_iommu=on{% endif %}"
+    - name: Format VFIO PCI IDs
+      ansible.builtin.set_fact:
+        vfio_pci_ids_str: "{{ kvm_vfio_pci_ids | join(',') }}"
 
-- name: Format VFIO PCI IDs
-  ansible.builtin.set_fact:
-    vfio_pci_ids_str: "{{ kvm_vfio_pci_ids | join(',') }}"
+    - name: Ensure VFIO modules are loaded in initramfs
+      ansible.builtin.blockinfile:
+        path: /etc/initramfs-tools/modules
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - VFIO MODULES"
+        block: |
+          vfio
+          vfio_iommu_type1
+          vfio_pci
+          vfio_virqfd
+      notify: Update Initramfs
 
-- name: Ensure VFIO modules are loaded in initramfs
-  ansible.builtin.blockinfile:
-    path: /etc/initramfs-tools/modules
-    marker: "# {mark} ANSIBLE MANAGED BLOCK - VFIO MODULES"
-    block: |
-      vfio
-      vfio_iommu_type1
-      vfio_pci
-      vfio_virqfd
-  notify: Update Initramfs
+    - name: Ensure /etc/default/grub.d exists
+      ansible.builtin.file:
+        path: /etc/default/grub.d
+        state: directory
+        mode: '0755'
 
-- name: Ensure /etc/default/grub.d exists
-  ansible.builtin.file:
-    path: /etc/default/grub.d
-    state: directory
-    mode: '0755'
-
-- name: Safely configure GRUB for VFIO passthrough via grub.d
-  ansible.builtin.copy:
-    dest: /etc/default/grub.d/99-vfio-passthrough.cfg
-    content: |
-      # Ansible Managed: Add VFIO PCI Passthrough flags to kernel boot parameters
-      GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT {{ iommu_flag }} iommu=pt vfio-pci.ids={{ vfio_pci_ids_str }}"
-    mode: '0644'
-  notify: Update GRUB
+    - name: Safely configure GRUB for VFIO passthrough via grub.d
+      ansible.builtin.copy:
+        dest: /etc/default/grub.d/99-vfio-passthrough.cfg
+        content: |
+          # Ansible Managed: Add VFIO PCI Passthrough flags to kernel boot parameters
+          GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT {{ iommu_flag }} iommu=pt vfio-pci.ids={{ vfio_pci_ids_str }}"
+        mode: '0644'
+      notify: Update GRUB

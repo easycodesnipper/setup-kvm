@@ -6,6 +6,7 @@
   register: kvm_cpu_virt_check
   changed_when: false
   failed_when: false
+  check_mode: false
 
 - name: Fail if virtualization is not supported
   ansible.builtin.fail:
@@ -16,12 +17,7 @@
   ansible.builtin.package:
     update_cache: true
 
-# - name: Install KVM packages
-#   ansible.builtin.package:
-#     name: "{{ kvm_packages[ansible_facts['os_family']] }}"
-#     state: present
-
-- name: Install package without recommended/weak dependencies
+- name: Install KVM packages
   block:
     - name: Install with APT (no recommends)
       ansible.builtin.apt:
@@ -127,7 +123,3 @@
 
 - name: Configure VFIO PCI Passthrough
   ansible.builtin.include_tasks: vfio.yml
-  when: >
-    (kvm_vfio_pci_ids is defined and kvm_vfio_pci_ids | length > 0) or
-    (kvm_auto_passthrough_nvidia | bool)
-

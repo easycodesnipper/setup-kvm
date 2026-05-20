@@ -1,9 +1,3 @@
 ---
 # Enable nested virtualization (optional)
-kvm_enable_nested_virtualization: false
-
-# Enable VFIO PCI passthrough by providing a list of PCI IDs (e.g. ['10de:27b2', '10de:22bc'])
-kvm_vfio_pci_ids: []
-
-# Automatically detect all NVIDIA GPUs on the host and passthrough them via VFIO
-kvm_auto_passthrough_nvidia: true
+kvm_enable_nested_virtualization: true
