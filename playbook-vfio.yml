@@ -1,0 +1,28 @@
+---
+- name: Configure VFIO PCI Passthrough
+  hosts: "{{ kvm_hosts | default('all') }}"
+  become: true
+
+  tasks:
+    - name: Dynamically detect CPU IOMMU flag from setup facts
+      ansible.builtin.set_fact:
+        kvm_cpu_virt_check:
+          stdout: "{% if 'vmx' in ansible_facts['processor_features'] %}vmx{% elif 'svm' in ansible_facts['processor_features'] %}svm{% else %}vmx{% endif %}"
+      when: ansible_facts['processor_features'] is defined
+
+    - name: Fallback CPU check if facts are missing
+      ansible.builtin.shell: lscpu
+      register: _lscpu_output
+      changed_when: false
+      when: kvm_cpu_virt_check is undefined
+
+    - name: Set fallback CPU fact
+      ansible.builtin.set_fact:
+        kvm_cpu_virt_check:
+          stdout: "{{ _lscpu_output.stdout }}"
+      when: kvm_cpu_virt_check is undefined
+
+    - name: Run VFIO configuration tasks
+      ansible.builtin.include_role:
+        name: kvm
+        tasks_from: vfio.yml

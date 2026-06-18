@@ -1,0 +1,92 @@
+---
+- name: Remove VFIO PCI Passthrough Configuration
+  hosts: "{{ kvm_hosts | default('all') }}"
+  become: true
+
+  tasks:
+    - name: Dynamically detect CPU IOMMU flag from setup facts
+      ansible.builtin.set_fact:
+        kvm_cpu_virt_check:
+          stdout: "{% if 'vmx' in ansible_facts['processor_features'] %}vmx{% elif 'svm' in ansible_facts['processor_features'] %}svm{% else %}vmx{% endif %}"
+      when: ansible_facts['processor_features'] is defined
+
+    - name: Fallback CPU check if facts are missing
+      ansible.builtin.shell: lscpu
+      register: _lscpu_output
+      changed_when: false
+      when: kvm_cpu_virt_check is undefined
+
+    - name: Set fallback CPU fact
+      ansible.builtin.set_fact:
+        kvm_cpu_virt_check:
+          stdout: "{{ _lscpu_output.stdout }}"
+      when: kvm_cpu_virt_check is undefined
+
+    - name: Auto-detect NVIDIA PCI IDs using lspci
+      ansible.builtin.shell: >
+        set -o pipefail;
+        lspci -nn | grep -i NVIDIA | grep -oP '\[[0-9a-fA-F]{4}:[0-9a-fA-F]{4}\]' | tr -d '[]' | sort | uniq
+      args:
+        executable: /bin/bash
+      register: lspci_nvidia_output
+      changed_when: false
+      check_mode: false
+
+    - name: Set dynamic VFIO PCI IDs
+      ansible.builtin.set_fact:
+        kvm_vfio_pci_ids: "{{ lspci_nvidia_output.stdout_lines }}"
+      when:
+        - lspci_nvidia_output.stdout_lines | length > 0
+
+    - name: Remove VFIO Configuration
+      when: kvm_vfio_pci_ids is defined and kvm_vfio_pci_ids | length > 0
+      block:
+        - name: Determine IOMMU flag based on CPU
+          ansible.builtin.set_fact:
+            iommu_flag: "{% if 'vmx' in kvm_cpu_virt_check.stdout %}intel_iommu=on{% elif 'svm' in kvm_cpu_virt_check.stdout %}amd_iommu=on{% else %}intel_iommu=on{% endif %}"
+
+        - name: Format VFIO PCI IDs
+          ansible.builtin.set_fact:
+            vfio_pci_ids_str: "{{ kvm_vfio_pci_ids | join(',') }}"
+
+        - name: Remove VFIO modules from initramfs
+          ansible.builtin.blockinfile:
+            path: /etc/initramfs-tools/modules
+            marker: "# {mark} ANSIBLE MANAGED BLOCK - VFIO MODULES"
+            state: absent
+          notify: Update Initramfs
+
+        - name: Remove VFIO binding and NVIDIA blacklisting configuration
+          ansible.builtin.file:
+            path: /etc/modprobe.d/vfio-pci.conf
+            state: absent
+          notify: Update Initramfs
+
+        - name: Remove GRUB VFIO passthrough configuration
+          ansible.builtin.file:
+            path: /etc/default/grub.d/99-vfio-passthrough.cfg
+            state: absent
+          notify: Update GRUB
+
+        - name: Ensure native NVIDIA drivers can load (remove blacklist)
+          ansible.builtin.copy:
+            dest: /etc/modprobe.d/nvidia-enable.conf
+            content: |
+              # Re-enable NVIDIA drivers after VFIO removal
+              # This file ensures NVIDIA drivers are not blocked
+              install nvidia /sbin/modprobe --ignore-install nvidia
+              install nvidia_drm /sbin/modprobe --ignore-install nvidia_drm
+              install nvidia_modeset /sbin/modprobe --ignore-install nvidia_modeset
+              install nvidia-gpu /sbin/modprobe --ignore-install nvidia-gpu
+              install nouveau /sbin/modprobe --ignore-install nouveau
+            mode: '0644'
+          notify: Update Initramfs
+
+  handlers:
+    - name: Update GRUB
+      ansible.builtin.command: update-grub
+      changed_when: true
+
+    - name: Update Initramfs
+      ansible.builtin.command: update-initramfs -u -k all
+      changed_when: true

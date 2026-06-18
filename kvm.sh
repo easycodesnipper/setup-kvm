@@ -3,6 +3,8 @@
 # Configuration
 INSTALL_PLAYBOOK="playbook-install.yml"
 UNINSTALL_PLAYBOOK="playbook-uninstall.yml"
+VFIO_PLAYBOOK="playbook-vfio.yml"
+UNVFIO_PLAYBOOK="playbook-unvfio.yml"
 CONNECTION_TYPE="ssh" 
 INVENTORY="inventory.ini" 
 ACTION=""
@@ -13,10 +15,12 @@ export ANSIBLE_HOST_KEY_CHECKING=False
 
 # Function to display usage
 usage() {
-  echo "Usage: $0 [--install | --uninstall] [--local]"
-  echo "  --install     Run the KVM installation playbook"
-  echo "  --uninstall   Run the KVM uninstallation playbook"
-  echo "  --local       Run on the local machine (bypasses SSH)"
+  echo "Usage: $0 [--install | --uninstall | --vfio | --unvfio] [--local]"
+  echo "  --install    Run the KVM installation playbook"
+  echo "  --uninstall  Run the KVM uninstallation playbook"
+  echo "  --vfio       Run the VFIO PCI passthrough configuration playbook"
+  echo "  --unvfio     Remove VFIO PCI passthrough configuration"
+  echo "  --local      Run on the local machine (bypasses SSH)"
   exit 1
 }
 
@@ -25,6 +29,8 @@ for arg in "$@"; do
   case $arg in
     --install)   ACTION="install"; shift ;;
     --uninstall) ACTION="uninstall"; shift ;;
+    --vfio)      ACTION="vfio"; shift ;;
+    --unvfio)    ACTION="unvfio"; shift ;;
     --local)     IS_LOCAL=true; shift ;;
     *) ;;
   esac
@@ -50,12 +56,20 @@ else
 fi
 
 # Determine Playbook
-[[ "$ACTION" == "install" ]] && PLAYBOOK=$INSTALL_PLAYBOOK || PLAYBOOK=$UNINSTALL_PLAYBOOK
+if [[ "$ACTION" == "install" ]]; then
+  PLAYBOOK=$INSTALL_PLAYBOOK
+elif [[ "$ACTION" == "uninstall" ]]; then
+  PLAYBOOK=$UNINSTALL_PLAYBOOK
+elif [[ "$ACTION" == "vfio" ]]; then
+  PLAYBOOK=$VFIO_PLAYBOOK
+elif [[ "$ACTION" == "unvfio" ]]; then
+  PLAYBOOK=$UNVFIO_PLAYBOOK
+fi
 
 echo "--- Action: $ACTION KVM ($CONNECTION_TYPE) ---"
 
-# Run Ansible
+# Run Ansible (Added -K because modifying GRUB/modprobe requires sudo privileges)
 ansible-playbook -i "$INVENTORY" \
                  -e "ansible_connection=$CONNECTION_TYPE" \
-                 $PLAYBOOK_VARS \
+                 "$PLAYBOOK_VARS" \
                  "$PLAYBOOK"

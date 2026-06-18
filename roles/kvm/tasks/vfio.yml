@@ -1,5 +1,5 @@
 ---
-# tasks/vfio.yml
+# role/kvm/tasks/vfio.yml
 - name: Auto-detect NVIDIA PCI IDs using lspci
   ansible.builtin.shell: >
     set -o pipefail;
@@ -36,6 +36,28 @@
           vfio_iommu_type1
           vfio_pci
           vfio_virqfd
+      notify: Update Initramfs
+
+    - name: Configure VFIO binding and aggressive NVIDIA blacklisting
+      ansible.builtin.copy:
+        dest: /etc/modprobe.d/vfio-pci.conf
+        content: |
+          # Force vfio-pci to claim the NVIDIA GPU components before native drivers can
+          options vfio-pci ids={{ vfio_pci_ids_str }}
+          
+          # Soft dependency: Ensure vfio-pci loads BEFORE native graphics drivers
+          softdep nvidia pre: vfio-pci
+          softdep nvidia-gpu pre: vfio-pci
+          softdep nouveau pre: vfio-pci
+          
+          # Prevent native/open-source drivers from grabbing the card
+          blacklist nvidia
+          blacklist nvidiafb
+          blacklist nvidia_drm
+          blacklist nvidia_modeset
+          blacklist nvidia-gpu
+          blacklist nouveau
+        mode: '0644'
       notify: Update Initramfs
 
     - name: Ensure /etc/default/grub.d exists
